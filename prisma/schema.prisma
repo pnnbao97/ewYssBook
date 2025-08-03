@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clerkId      String   @unique
+  name         String?
+  email        String   @unique
+  phone        Int?
+  address      String?
+  role         UserRole @default(user)
+  profileImage String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  orders       Order[]
+}
+
+model Book {
+  id                     String      @id @default(cuid())
+  title                  String
+  slug                   String      @unique
+  author                 String
+  isbn                   String?     @unique
+  summary                String?
+  coverImageUrl          String?
+  primaryCategory        String
+  relatedCategories      String[]
+  details                String
+  tableOfContents        String
+  previewUrl             String
+  previewImageUrl        String[]
+  isPublished            Boolean     @default(true)
+  availableForPreorder   Boolean     @default(false)
+  predictableReleaseDate DateTime?
+  colorPrice             Int
+  blackAndWhitePrice     Int
+  hasColorPriceSale      Boolean     @default(false)
+  colorPriceSale         Int?
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+  orderItems             OrderItem[]
+}
+
+model Coupon {
+  id                 Int       @id @default(autoincrement())
+  code               String    @unique
+  name               String
+  description        String?
+  discountType       String
+  discountValue      Int
+  minimumOrderAmount Int?
+  maximumDiscount    Int?
+  usageLimit         Int?
+  usedCount          Int       @default(0)
+  isActive           Boolean   @default(true)
+  startsAt           DateTime?
+  expiresAt          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  orders             Order[]
+}
+
+model Order {
+  id                   Int           @id @default(autoincrement())
+  orderNumber          String        @unique
+  userId               String
+  shippingFullName     String
+  shippingPhone        String
+  shippingEmail        String?
+  shippingAddress      String
+  subtotal             Int
+  shippingFee          Int           @default(0)
+  couponDiscount       Int           @default(0)
+  totalAmount          Int
+  couponId             Int?
+  couponCode           String?
+  paymentMethod        PaymentMethod
+  paymentStatus        PaymentStatus @default(PENDING)
+  paymentTransactionId String?
+  transactionId        String?
+  status               OrderStatus   @default(PENDING)
+  notes                String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  shippedAt            DateTime?
+  deliveredAt          DateTime?
+  coupon               Coupon?       @relation(fields: [couponId], references: [id])
+  user                 User          @relation(fields: [userId], references: [clerkId])
+  orderItems           OrderItem[]
+}
+
+model OrderItem {
+  id         Int         @id @default(autoincrement())
+  orderId    Int
+  bookId     String
+  quantity   Int
+  version    BookVersion
+  unitPrice  Int
+  totalPrice Int
+  createdAt  DateTime    @default(now())
+  book       Book        @relation(fields: [bookId], references: [id])
+  order      Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+enum UserRole {
+  user
+  admin
+}
+
+enum PaymentMethod {
+  CASH
+  CREDIT_CARD
+  DEBIT_CARD
+  PAYPAL
+  BANK_TRANSFER
+  MOMO
+  ZALOPAY
+  VNPAY
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum BookVersion {
+  color
+  black_and_white
+}
