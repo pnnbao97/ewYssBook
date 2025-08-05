@@ -73,7 +73,7 @@ export default function Footer() {
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-4 lg:space-y-0">
             <div className="flex items-center space-x-4">
               <img
-                src="/ewyss-lg.png"
+                src="/ewysslg.png"
                 alt="ewYss"
                 className="h-40"
               />

@@ -21,8 +21,8 @@ export default function ProductCard({
   isOnSale
 }: ProductCardProps) {
   return (
-    <Card className="group hover:shadow-lg transition-shadow duration-200">
-      <CardContent className="p-4">
+    <Card className="group hover:shadow-lg transition-shadow duration-200 h-full flex flex-col">
+      <CardContent className="p-4 flex flex-col h-full">
         <div className="relative mb-4">
           <Link href={`/product/${id}`}>
             <img
@@ -36,9 +36,9 @@ export default function ProductCard({
           </button>
         </div>
 
-        <div className="space-y-2">
+        <div className="flex flex-col flex-grow space-y-2">
           <Link href={`/product/${id}`}>
-            <h3 className="text-sm font-medium text-gray-900 leading-tight line-clamp-3 hover:text-[#67c2cf] cursor-pointer">
+            <h3 className="text-sm font-medium text-gray-900 leading-tight line-clamp-3 hover:text-[#67c2cf] cursor-pointer min-h-[3.75rem]">
               {title}
             </h3>
           </Link>
@@ -58,13 +58,15 @@ export default function ProductCard({
             )}
           </div>
 
-          <Button
-            className="w-full bg-[#67c2cf] hover:bg-[#5bb0bd] text-white"
-            size="sm"
-          >
-            <ShoppingCart className="w-4 h-4 mr-2" />
-            Add to Cart
-          </Button>
+          <div className="mt-auto pt-2">
+            <Button
+              className="w-full bg-[#67c2cf] hover:bg-[#5bb0bd] text-white"
+              size="sm"
+            >
+              <ShoppingCart className="w-4 h-4 mr-2" />
+              Add to Cart
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

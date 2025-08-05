@@ -65,23 +65,6 @@ export default function MainNavigation() {
           <a href="#" className="px-4 py-4 hover:bg-[#2c4a54] transition-colors font-medium md:text-lg text-xs">
             CẬP NHẬT GUIDELINE
           </a>
-
-          {/* <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center px-6 py-4 hover:bg-[#2c4a54] transition-colors">
-              <span className="font-medium">BESTSELLERS</span>
-              <ChevronDown className="w-4 h-4 ml-2" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem>Medicine Bestsellers</DropdownMenuItem>
-              <DropdownMenuItem>Nursing Bestsellers</DropdownMenuItem>
-              <DropdownMenuItem>Dentistry Bestsellers</DropdownMenuItem>
-              <DropdownMenuItem>Health Professions Bestsellers</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <a href="#" className="px-6 py-4 hover:bg-[#2c4a54] transition-colors font-medium">
-            DIGITAL SUBSCRIPTIONS
-          </a> */}
         </div>
       </div>
     </nav>

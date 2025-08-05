@@ -3,11 +3,10 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useCartStore } from '@/hooks/use-cart';
 import { SignInButton, useUser } from '@clerk/nextjs';
-import { ShoppingCart, Plus, Minus, Package, AlertCircle, CheckCircle, CreditCard } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Package, AlertCircle, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 
 interface AddProps {
   bookId: number;

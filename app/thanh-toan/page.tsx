@@ -6,21 +6,23 @@ import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ChevronDown, CreditCard, Truck } from "lucide-react";
+import { CreditCard, Truck, Loader2 } from "lucide-react";
 import { useCartStore } from "@/hooks/use-cart";
+import { toast } from "sonner"; // assuming you have sonner for notifications
 
 const Checkout = () => {
   const { items, totalPrice, clearCart } = useCartStore();
   const [currentStep, setCurrentStep] = useState(1);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     shippingFullName: "",
     shippingPhone: "",
     shippingAddress: "",
-    paymentMethod: "BANK_TRANSFER" as const,
+    paymentMethod: "VNPAY" as const,
+    bankCode: "",
     notes: ""
   });
 
@@ -30,44 +32,79 @@ const Checkout = () => {
 
   const handleNext = () => {
     if (currentStep === 1) {
+      // Validate required fields
+      if (!formData.email || !formData.shippingFullName || !formData.shippingPhone || !formData.shippingAddress) {
+        toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
+        return;
+      }
       setCurrentStep(2);
     } else if (currentStep === 2) {
       setCurrentStep(3);
     } else {
       // Process payment
-      console.log("Processing payment...", formData);
-      // Here you would typically call your API to create the order
       handleCreateOrder();
     }
   };
 
-  const handleCreateOrder = async () => {
-    // Mock order creation
-    const orderData = {
-      shippingFullName: formData.shippingFullName,
-      shippingPhone: formData.shippingPhone,
-      shippingEmail: formData.email,
-      shippingAddress: formData.shippingAddress,
-      subtotal: totalPrice,
-      shippingFee: 0,
-      couponDiscount: 0,
-      totalAmount: totalPrice,
-      paymentMethod: formData.paymentMethod,
-      notes: formData.notes,
-      orderItems: items.map(item => ({
-        bookId: item.bookId,
-        quantity: item.quantity,
-        version: item.version === 'color' ? 'color' : 'black_and_white',
-        unitPrice: item.bookPrice,
-        totalPrice: item.bookPrice * item.quantity
-      }))
-    };
+  const generateTxnRef = () => {
+    return `ORDER_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  };
 
-    console.log("Creating order:", orderData);
+  const handleCreateOrder = async () => {
+    setIsProcessing(true);
     
-    // After successful order creation, clear cart and redirect
-    clearCart();
-    // redirect to success page or order confirmation
+    try {
+      const txnRef = generateTxnRef();
+      
+      // Prepare order data
+      const orderData = {
+        txnRef,
+        amount: totalPrice,
+        orderInfo: `Thanh toan don hang sach - ${formData.shippingFullName}`,
+        bankCode: formData.bankCode,
+        shippingInfo: {
+          fullName: formData.shippingFullName,
+          phone: formData.shippingPhone,
+          email: formData.email,
+          address: formData.shippingAddress,
+          notes: formData.notes
+        },
+        orderItems: items.map(item => ({
+          bookId: item.bookId,
+          quantity: item.quantity,
+          version: item.version === 'color' ? 'color' : 'black_and_white',
+          unitPrice: item.bookPrice,
+          totalPrice: item.bookPrice * item.quantity
+        }))
+      };
+
+      // Call API to create VNPay payment URL
+      const response = await fetch('/api/vnpay/create-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData)
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.paymentUrl) {
+        // Store order data temporarily (you might want to save to database here)
+        sessionStorage.setItem('pendingOrder', JSON.stringify(orderData));
+        
+        // Redirect to VNPay
+        window.location.href = result.paymentUrl;
+      } else {
+        throw new Error(result.error || 'Failed to create payment');
+      }
+
+    } catch (error) {
+      console.error('Payment creation error:', error);
+      toast.error("Có lỗi xảy ra khi tạo thanh toán. Vui lòng thử lại.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const subtotal = totalPrice;
@@ -235,42 +272,55 @@ const Checkout = () => {
                 <h2 className="text-2xl font-semibold mb-6">Phương thức thanh toán</h2>
                 
                 <div className="space-y-4">
-                  {/* Bank Transfer - Only Option */}
+                  {/* VNPay Payment */}
                   <div className="border rounded-lg p-6 bg-blue-50 border-blue-200">
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-3 mb-4">
                       <CreditCard className="w-8 h-8 text-blue-600" />
                       <div>
-                        <h3 className="font-semibold text-lg">Chuyển khoản ngân hàng</h3>
-                        <p className="text-sm text-gray-600">Thanh toán qua chuyển khoản trực tiếp</p>
+                        <h3 className="font-semibold text-lg">Thanh toán qua VNPay</h3>
+                        <p className="text-sm text-gray-600">Thanh toán an toàn qua cổng VNPay</p>
                       </div>
                     </div>
                     
-                    <div className="mt-4 p-4 bg-white rounded-lg border">
-                      <h4 className="font-medium mb-3">Thông tin tài khoản:</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Ngân hàng:</span>
-                          <span className="font-medium">Vietcombank</span>
+                    {/* Bank Selection */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Chọn phương thức thanh toán (tùy chọn):</Label>
+                      <RadioGroup
+                        value={formData.bankCode}
+                        onValueChange={(value) => handleInputChange("bankCode", value)}
+                        className="grid grid-cols-1 gap-3"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="" id="all" />
+                          <label htmlFor="all" className="text-sm">
+                            Tất cả phương thức (chọn tại VNPay)
+                          </label>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Số tài khoản:</span>
-                          <span className="font-medium font-mono">1234567890</span>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="VNPAYQR" id="qr" />
+                          <label htmlFor="qr" className="text-sm">
+                            Thanh toán quét mã QR
+                          </label>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Chủ tài khoản:</span>
-                          <span className="font-medium">CÔNG TY ABC</span>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="VNBANK" id="atm" />
+                          <label htmlFor="atm" className="text-sm">
+                            Thẻ ATM - Tài khoản ngân hàng nội địa
+                          </label>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Nội dung:</span>
-                          <span className="font-medium">Thanh toán đơn hàng + SĐT</span>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="INTCARD" id="visa" />
+                          <label htmlFor="visa" className="text-sm">
+                            Thẻ thanh toán quốc tế (Visa, Mastercard)
+                          </label>
                         </div>
-                      </div>
-                      
-                      <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                        <p className="text-sm text-yellow-800">
-                          <strong>Lưu ý:</strong> Vui lòng ghi rõ số điện thoại trong nội dung chuyển khoản để chúng tôi xác nhận đơn hàng nhanh chóng.
-                        </p>
-                      </div>
+                      </RadioGroup>
+                    </div>
+
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                      <p className="text-sm text-yellow-800">
+                        <strong>Lưu ý:</strong> Bạn sẽ được chuyển hướng đến cổng thanh toán VNPay để hoàn tất giao dịch.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -326,13 +376,18 @@ const Checkout = () => {
                       <div className="flex items-center space-x-3">
                         <CreditCard className="w-6 h-6 text-blue-600" />
                         <div>
-                          <p className="font-medium">Chuyển khoản ngân hàng</p>
-                          <p className="text-sm text-gray-600">Vietcombank - 1234567890</p>
+                          <p className="font-medium">Thanh toán qua VNPay</p>
+                          <p className="text-sm text-gray-600">
+                            {formData.bankCode === 'VNPAYQR' && 'Thanh toán quét mã QR'}
+                            {formData.bankCode === 'VNBANK' && 'Thẻ ATM - Ngân hàng nội địa'}
+                            {formData.bankCode === 'INTCARD' && 'Thẻ thanh toán quốc tế'}
+                            {!formData.bankCode && 'Chọn phương thức tại VNPay'}
+                          </p>
                         </div>
                       </div>
-                      <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded">
-                        <p className="text-sm text-orange-800">
-                          <strong>Quan trọng:</strong> Đơn hàng sẽ được xử lý sau khi chúng tôi xác nhận thanh toán từ bạn.
+                      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded">
+                        <p className="text-sm text-green-800">
+                          <strong>An toàn:</strong> Giao dịch được bảo mật bởi VNPay với công nghệ mã hóa hiện đại.
                         </p>
                       </div>
                     </CardContent>
@@ -381,6 +436,7 @@ const Checkout = () => {
                 <Button 
                   variant="outline" 
                   onClick={() => setCurrentStep(currentStep - 1)}
+                  disabled={isProcessing}
                 >
                   Quay lại
                 </Button>
@@ -388,7 +444,7 @@ const Checkout = () => {
               
               <div className="flex gap-4 ml-auto">
                 <Link href="/thanh-toan/gio-hang">
-                  <Button variant="outline">
+                  <Button variant="outline" disabled={isProcessing}>
                     Quay lại giỏ hàng
                   </Button>
                 </Link>
@@ -397,10 +453,20 @@ const Checkout = () => {
                   className="bg-gradient-to-r from-cyan-700 to-cyan-900 hover:from-cyan-800 hover:to-cyan-950 text-white"
                   onClick={handleNext}
                   disabled={
+                    isProcessing ||
                     (currentStep === 1 && (!formData.email || !formData.shippingFullName || !formData.shippingPhone || !formData.shippingAddress))
                   }
                 >
-                  {currentStep === 1 ? "Tiếp tục" : currentStep === 2 ? "Xem lại đơn hàng" : "Hoàn tất đặt hàng"}
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    <>
+                      {currentStep === 1 ? "Tiếp tục" : currentStep === 2 ? "Xem lại đơn hàng" : "Thanh toán qua VNPay"}
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
@@ -475,6 +541,17 @@ const Checkout = () => {
                     </div>
                     <p className="text-xs text-green-600 mt-1">
                       Giao hàng trong 2-3 ngày làm việc
+                    </p>
+                  </div>
+
+                  {/* Payment Security */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-blue-700">
+                      <CreditCard className="w-4 h-4" />
+                      <span className="text-sm font-medium">Thanh toán an toàn</span>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-1">
+                      Được bảo mật bởi VNPay
                     </p>
                   </div>
 
