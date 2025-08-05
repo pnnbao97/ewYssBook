@@ -66,14 +66,14 @@ export class VNPayService {
 
   public createPaymentUrl(params: CreatePaymentUrlParams): string {
     const createDate = new Date().toISOString().replace(/[-T:]/g, '').slice(0, 14);
-    const expireDate = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
-      .toISOString().replace(/[-T:]/g, '').slice(0, 14);
+    // const expireDate = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
+    //   .toISOString().replace(/[-T:]/g, '').slice(0, 14);
 
     const vnpParams: VNPayParams = {
       vnp_Version: '2.1.0',
       vnp_Command: 'pay',
       vnp_TmnCode: this.tmnCode,
-      vnp_Amount: params.amount * 100, // VNPay requires amount * 100
+      vnp_Amount: (params.amount * 100), // VNPay requires amount * 100
       vnp_CreateDate: createDate,
       vnp_CurrCode: 'VND',
       vnp_IpAddr: params.ipAddr,
@@ -82,7 +82,7 @@ export class VNPayService {
       vnp_OrderType: 'other',
       vnp_ReturnUrl: params.returnUrl,
       vnp_TxnRef: params.txnRef,
-      vnp_ExpireDate: expireDate,
+    //   vnp_ExpireDate: expireDate,
     };
 
     if (params.bankCode) {
