@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const vnpayService = new VNPayService();
     
     // Create return URL (adjust according to your domain)
-    const returnUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/thanh-toan/ket-qua`;
+    const returnUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/thanh-toan/ket-qua`;
 
     const paymentUrl = vnpayService.createPaymentUrl({
       amount,
