@@ -3,10 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle2, XCircle, Clock, ArrowRight } from 'lucide-react';
+import { Clock } from 'lucide-react';
 
 interface PaymentResult {
   success: boolean;

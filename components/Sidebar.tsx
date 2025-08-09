@@ -12,6 +12,9 @@ interface CategoryItem {
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
+  categories: CategoryItem[];
+  selectedCategory: string | null;
+  onCategorySelect: (category: string | null) => void;
 }
 
 interface FilterSectionProps {
@@ -37,65 +40,43 @@ function FilterSection({ title, children, defaultExpanded = true }: FilterSectio
   );
 }
 
-export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
-  const categories: CategoryItem[] = [
-    { name: "Allergy", count: 84 },
-    { name: "Anatomy", count: 74 },
-    { name: "Anesthesiology", count: 186 },
-    { name: "Basic Science", count: 20 },
-    { name: "Behavioral Science", count: 10 },
-    { name: "Biochemistry", count: 9 },
-    { name: "Cardiology", count: 421 },
-    { name: "Cell Biology", count: 10 },
-    { name: "ClinicalKey", count: 7 },
-    { name: "Complementary Medicine", count: 15 },
-    { name: "Critical Care", count: 89 },
-    { name: "Dermatology", count: 156 },
-    { name: "Embryology", count: 12 },
-    { name: "Emergency", count: 134 },
-    { name: "Endocrinology", count: 67 },
-    { name: "Epidemiology", count: 23 },
-    { name: "Family Medicine", count: 106 },
-    { name: "Gastroenterology", count: 170 },
-    { name: "General Medicine", count: 224 },
-    { name: "General Surgery", count: 878 },
-    { name: "Genetics", count: 5 },
-    { name: "Geriatrics", count: 70 },
-    { name: "Hematology", count: 153 },
-    { name: "Hepatology", count: 75 },
-    { name: "Histology", count: 8 },
-    { name: "Immunology", count: 31 },
-    { name: "Infectious Disease", count: 105 },
-    { name: "Internal Medicine", count: 415 },
-    { name: "Lab and Diagnostic Tests", count: 1 },
-    { name: "Microbiology", count: 9 },
-    { name: "Nephrology", count: 23 },
-    { name: "Neurology", count: 170 },
-    { name: "Neurosurgery", count: 59 },
-    { name: "Obstetrics/Gynecology", count: 138 },
-    { name: "Occupational Medicine", count: 33 },
-    { name: "Oncology", count: 104 },
-    { name: "Ophthalmology", count: 102 },
-    { name: "Optometry", count: 1 },
-    { name: "Orthopaedics", count: 341 },
-    { name: "Otolaryngology", count: 147 },
-    { name: "Pain Medicine", count: 32 },
-    { name: "Palliative Medicine", count: 4 },
-    { name: "Pathology", count: 236 },
-    { name: "Pediatrics", count: 278 },
-    { name: "Pharmacology", count: 18 },
-    { name: "Physical Medicine and Rehab", count: 115 },
-    { name: "Physiology", count: 25 },
-    { name: "Plastic Surgery", count: 189 },
-    { name: "Psychiatry", count: 208 },
-    { name: "Pulmonary and Respiratory", count: 127 },
-    { name: "Radiology", count: 511 },
-    { name: "Rheumatology", count: 81 },
-    { name: "Sleep Medicine", count: 48 },
-    { name: "Sports Medicine", count: 98 },
-    { name: "Urology", count: 96 },
-    { name: "Vascular Surgery", count: 26 }
+export default function Sidebar({ 
+  isOpen = true, 
+  onClose, 
+  categories, 
+  selectedCategory, 
+  onCategorySelect 
+}: SidebarProps) {
+  // Default categories từ code gốc của bạn
+  const defaultCategories: CategoryItem[] = [
+    { name: "Cấp cứu", count: 84 },
+    { name: "Chẩn đoán hình ảnh", count: 74 },
+    { name: "Cơ xương khớp", count: 20 },
+    { name: "Da liễu", count: 10 },
+    { name: "Dược lý", count: 18 },
+    { name: "Giải phẫu - Giải phẫu bệnh", count: 74 },
+    { name: "Hóa sinh - Di truyền", count: 5 },
+    { name: "Hô hấp", count: 9 },
+    { name: "Huyết học", count: 421 },
+    { name: "Miễn dịch - Dị ứng", count: 31 },
+    { name: "Ngoại khoa", count: 10 },
+    { name: "Nhi khoa", count: 7 },
+    { name: "Nội khoa", count: 15 },
+    { name: "Nội tiết", count: 89 },
+    { name: "san-phu-khoa", count: 156 },
+    { name: "Sinh lý - Sinh lý bệnh", count: 6 },
+    { name: "Thần kinh học", count: 12 },
+    { name: "Tiết niệu", count: 134 },
+    { name: "Tiêu hóa - Gan mật", count: 67 },
+    { name: "Tim mạch", count: 23 },
+    { name: "Truyền nhiễm", count: 106 },
+    { name: "Ung bướu", count: 170 },
+    { name: "Y học gia đình", count: 224 },
   ];
+
+  // Sử dụng danh sách từ database nếu có, nếu không thì dùng default
+  const displayCategories = defaultCategories;
+  const totalBooksCount = displayCategories.reduce((total, cat) => total + cat.count, 0);
 
   return (
     <>
@@ -129,18 +110,40 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         )}
 
         <div className="p-4">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">CATEGORY</h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-4">SÁCH</h3>
 
-          <FilterSection title="Medical Specialties" defaultExpanded={true}>
+          <FilterSection title="Chuyên khoa" defaultExpanded={true}>
             <div className="space-y-2 max-h-96 overflow-y-auto">
-              {categories.map((category) => (
+              {/* All books option */}
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => onCategorySelect(null)}
+                  className={`text-sm text-left hover:underline ${
+                    selectedCategory === null 
+                      ? "text-[#a45827] font-medium" 
+                      : "text-[#67c2cf]"
+                  }`}
+                >
+                  Tất cả sách
+                </button>
+                <Badge variant="secondary" className="text-xs">
+                  {totalBooksCount}
+                </Badge>
+              </div>
+              
+              {/* Category options */}
+              {displayCategories.map((category) => (
                 <div key={category.name} className="flex items-center justify-between">
-                  <a
-                    href="#"
-                    className="text-[#67c2cf] hover:underline text-sm"
+                  <button
+                    onClick={() => onCategorySelect(category.name)}
+                    className={`text-sm text-left hover:underline ${
+                      selectedCategory === category.name 
+                        ? "text-[#a45827] font-medium" 
+                        : "text-[#67c2cf]"
+                    }`}
                   >
                     {category.name}
-                  </a>
+                  </button>
                   <Badge variant="secondary" className="text-xs">
                     {category.count}
                   </Badge>
@@ -149,45 +152,11 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
             </div>
           </FilterSection>
 
-          {/* <FilterSection title="PUBLICATION YEAR" defaultExpanded={false}>
-            <div className="space-y-2">
-              <div className="flex items-center">
-                <input type="checkbox" id="2024" className="mr-2" />
-                <label htmlFor="2024" className="text-sm">2024</label>
-              </div>
-              <div className="flex items-center">
-                <input type="checkbox" id="2023" className="mr-2" />
-                <label htmlFor="2023" className="text-sm">2023</label>
-              </div>
-              <div className="flex items-center">
-                <input type="checkbox" id="2022" className="mr-2" />
-                <label htmlFor="2022" className="text-sm">2022</label>
-              </div>
-            </div>
-          </FilterSection> */}
-
-          {/* <FilterSection title="PHÙ HỢP VỚI" defaultExpanded={false}>
-            <div className="space-y-2">
-              <div className="flex items-center">
-                <input type="checkbox" id="students" className="mr-2" />
-                <label htmlFor="students" className="text-sm">Sinh viên</label>
-              </div>
-              <div className="flex items-center">
-                <input type="checkbox" id="professionals" className="mr-2" />
-                <label htmlFor="professionals" className="text-sm">Chuyên gia</label>
-              </div>
-              <div className="flex items-center">
-                <input type="checkbox" id="residents" className="mr-2" />
-                <label htmlFor="residents" className="text-sm">Nội trú</label>
-              </div>
-            </div>
-          </FilterSection> */}
-
           <FilterSection title="THỂ LOẠI" defaultExpanded={false}>
             <div className="space-y-2">
               <div className="flex items-center">
                 <input type="checkbox" id="book" className="mr-2" />
-                <label htmlFor="book" className="text-sm">Sách</label>
+                <label htmlFor="book" className="text-sm">Sách in</label>
               </div>
               <div className="flex items-center">
                 <input type="checkbox" id="ebook" className="mr-2" />
@@ -195,40 +164,6 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
               </div>
             </div>
           </FilterSection>
-
-          {/* <FilterSection title="PRICE" defaultExpanded={false}>
-            <div className="space-y-2">
-              <div className="flex items-center">
-                <input type="checkbox" id="under50" className="mr-2" />
-                <label htmlFor="under50" className="text-sm">Under $50</label>
-              </div>
-              <div className="flex items-center">
-                <input type="checkbox" id="50to100" className="mr-2" />
-                <label htmlFor="50to100" className="text-sm">$50 - $100</label>
-              </div>
-              <div className="flex items-center">
-                <input type="checkbox" id="over100" className="mr-2" />
-                <label htmlFor="over100" className="text-sm">Over $100</label>
-              </div>
-            </div>
-          </FilterSection> */}
-
-          {/* <FilterSection title="PUBLICATION ORIGIN" defaultExpanded={false}>
-            <div className="space-y-2">
-              <div className="flex items-center">
-                <input type="checkbox" id="us" className="mr-2" />
-                <label htmlFor="us" className="text-sm">US</label>
-              </div>
-              <div className="flex items-center">
-                <input type="checkbox" id="uk" className="mr-2" />
-                <label htmlFor="uk" className="text-sm">UK</label>
-              </div>
-              <div className="flex items-center">
-                <input type="checkbox" id="international" className="mr-2" />
-                <label htmlFor="international" className="text-sm">International</label>
-              </div>
-            </div>
-          </FilterSection> */}
 
           <FilterSection title="SERIES" defaultExpanded={false}>
             <div className="space-y-2">

@@ -1,29 +1,32 @@
-'use client'
-import { useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { Header } from "@/components/Header";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { CreditCard, Truck, Loader2 } from "lucide-react";
-import { useCartStore } from "@/hooks/use-cart";
-import { toast } from "sonner"; // assuming you have sonner for notifications
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { Header } from '@/components/Header';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { CreditCard, Truck, Loader2 } from 'lucide-react';
+import { useCartStore } from '@/hooks/use-cart';
+import { toast } from 'sonner';
+import { useUser } from '@clerk/nextjs'; // Clerk hook for user data
 
 const Checkout = () => {
+  const { user } = useUser(); // Get user data from Clerk
   const { items, totalPrice, clearCart } = useCartStore();
   const [currentStep, setCurrentStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [formData, setFormData] = useState({
-    email: "",
-    shippingFullName: "",
-    shippingPhone: "",
-    shippingAddress: "",
-    paymentMethod: "VNPAY" as const,
-    bankCode: "",
-    notes: ""
+    email: user?.primaryEmailAddress?.emailAddress || '',
+    shippingFullName: user?.fullName || '',
+    shippingPhone: user?.phoneNumbers?.[0]?.phoneNumber || '',
+    shippingAddress: '',
+    paymentMethod: 'VNPAY' as const,
+    bankCode: '',
+    notes: '',
   });
 
   const handleInputChange = (field: string, value: string) => {
@@ -32,16 +35,14 @@ const Checkout = () => {
 
   const handleNext = () => {
     if (currentStep === 1) {
-      // Validate required fields
       if (!formData.email || !formData.shippingFullName || !formData.shippingPhone || !formData.shippingAddress) {
-        toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
+        toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
         return;
       }
       setCurrentStep(2);
     } else if (currentStep === 2) {
       setCurrentStep(3);
     } else {
-      // Process payment
       handleCreateOrder();
     }
   };
@@ -52,12 +53,12 @@ const Checkout = () => {
 
   const handleCreateOrder = async () => {
     setIsProcessing(true);
-    
+
     try {
       const txnRef = generateTxnRef();
-      
-      // Prepare order data
+
       const orderData = {
+        userId: user?.id,
         txnRef,
         amount: totalPrice,
         orderInfo: `Thanh toan don hang sach - ${formData.shippingFullName}`,
@@ -67,48 +68,43 @@ const Checkout = () => {
           phone: formData.shippingPhone,
           email: formData.email,
           address: formData.shippingAddress,
-          notes: formData.notes
+          notes: formData.notes,
         },
         orderItems: items.map(item => ({
-          bookId: item.bookId,
+          bookId: String(item.bookId),
           quantity: item.quantity,
           version: item.version === 'color' ? 'color' : 'black_and_white',
           unitPrice: item.bookPrice,
-          totalPrice: item.bookPrice * item.quantity
-        }))
+          totalPrice: item.bookPrice * item.quantity,
+        })),
       };
 
-      // Call API to create VNPay payment URL
       const response = await fetch('/api/vnpay/create-payment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(orderData)
+        body: JSON.stringify(orderData),
       });
 
       const result = await response.json();
 
       if (result.success && result.paymentUrl) {
-        // Store order data temporarily (you might want to save to database here)
         sessionStorage.setItem('pendingOrder', JSON.stringify(orderData));
-        
-        // Redirect to VNPay
         window.location.href = result.paymentUrl;
       } else {
         throw new Error(result.error || 'Failed to create payment');
       }
-
     } catch (error) {
       console.error('Payment creation error:', error);
-      toast.error("Có lỗi xảy ra khi tạo thanh toán. Vui lòng thử lại.");
+      toast.error('Có lỗi xảy ra khi tạo thanh toán. Vui lòng thử lại.');
     } finally {
       setIsProcessing(false);
     }
   };
 
   const subtotal = totalPrice;
-  const shippingFee = 0; // Free shipping
+  const shippingFee = 0;
   const total = subtotal + shippingFee;
 
   if (items.length === 0) {
@@ -130,49 +126,39 @@ const Checkout = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header onMobileMenuClick={() => {}} />
-      
       <div className="container mx-auto px-4 py-8">
         {/* Progress Steps */}
         <div className="flex items-center justify-center mb-8">
           <div className="flex items-center space-x-4">
-            {/* Step 1 */}
             <div className="flex items-center">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                currentStep >= 1 ? "bg-cyan-700 text-white" : "bg-gray-300 text-gray-600"
+                currentStep >= 1 ? 'bg-cyan-700 text-white' : 'bg-gray-300 text-gray-600'
               }`}>
-                {currentStep > 1 ? "✓" : "1"}
+                {currentStep > 1 ? '✓' : '1'}
               </div>
-              <span className={`ml-2 ${currentStep >= 1 ? "text-cyan-700" : "text-gray-600"}`}>
+              <span className={`ml-2 ${currentStep >= 1 ? 'text-cyan-700' : 'text-gray-600'}`}>
                 Thông tin giao hàng
               </span>
             </div>
-            
-            {/* Connector */}
-            <div className={`w-12 h-0.5 ${currentStep >= 2 ? "bg-cyan-700" : "bg-gray-300"}`} />
-            
-            {/* Step 2 */}
+            <div className={`w-12 h-0.5 ${currentStep >= 2 ? 'bg-cyan-700' : 'bg-gray-300'}`} />
             <div className="flex items-center">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                currentStep >= 2 ? "bg-cyan-700 text-white" : "bg-gray-300 text-gray-600"
+                currentStep >= 2 ? 'bg-cyan-700 text-white' : 'bg-gray-300 text-gray-600'
               }`}>
-                {currentStep > 2 ? "✓" : "2"}
+                {currentStep > 2 ? '✓' : '2'}
               </div>
-              <span className={`ml-2 ${currentStep >= 2 ? "text-cyan-700" : "text-gray-600"}`}>
+              <span className={`ml-2 ${currentStep >= 2 ? 'text-cyan-700' : 'text-gray-600'}`}>
                 Phương thức thanh toán
               </span>
             </div>
-
-            {/* Connector */}
-            <div className={`w-12 h-0.5 ${currentStep >= 3 ? "bg-cyan-700" : "bg-gray-300"}`} />
-            
-            {/* Step 3 */}
+            <div className={`w-12 h-0.5 ${currentStep >= 3 ? 'bg-cyan-700' : 'bg-gray-300'}`} />
             <div className="flex items-center">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                currentStep >= 3 ? "bg-cyan-700 text-white" : "bg-gray-300 text-gray-600"
+                currentStep >= 3 ? 'bg-cyan-700 text-white' : 'bg-gray-300 text-gray-600'
               }`}>
                 3
               </div>
-              <span className={`ml-2 ${currentStep >= 3 ? "text-cyan-700" : "text-gray-600"}`}>
+              <span className={`ml-2 ${currentStep >= 3 ? 'text-cyan-700' : 'text-gray-600'}`}>
                 Xác nhận đơn hàng
               </span>
             </div>
@@ -180,15 +166,11 @@ const Checkout = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
           <div className="lg:col-span-2">
-            {/* Step 1: Shipping Information */}
             {currentStep === 1 && (
               <div>
                 <h2 className="text-2xl font-semibold mb-6">Thông tin giao hàng</h2>
-                
                 <div className="space-y-6">
-                  {/* Email */}
                   <div>
                     <Label htmlFor="email" className="text-sm font-medium">
                       * Email
@@ -197,14 +179,12 @@ const Checkout = () => {
                       id="email"
                       type="email"
                       value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
+                      onChange={(e) => handleInputChange('email', e.target.value)}
                       className="mt-1"
                       placeholder="email@example.com"
                       required
                     />
                   </div>
-
-                  {/* Full Name */}
                   <div>
                     <Label htmlFor="fullName" className="text-sm font-medium">
                       * Họ và tên người nhận
@@ -212,14 +192,12 @@ const Checkout = () => {
                     <Input
                       id="fullName"
                       value={formData.shippingFullName}
-                      onChange={(e) => handleInputChange("shippingFullName", e.target.value)}
+                      onChange={(e) => handleInputChange('shippingFullName', e.target.value)}
                       className="mt-1"
                       placeholder="Nguyễn Văn A"
                       required
                     />
                   </div>
-
-                  {/* Phone */}
                   <div>
                     <Label htmlFor="phone" className="text-sm font-medium">
                       * Số điện thoại
@@ -227,14 +205,12 @@ const Checkout = () => {
                     <Input
                       id="phone"
                       value={formData.shippingPhone}
-                      onChange={(e) => handleInputChange("shippingPhone", e.target.value)}
+                      onChange={(e) => handleInputChange('shippingPhone', e.target.value)}
                       className="mt-1"
-                      placeholder="0123456789"
+                      placeholder=""
                       required
                     />
                   </div>
-
-                  {/* Address */}
                   <div>
                     <Label htmlFor="address" className="text-sm font-medium">
                       * Địa chỉ giao hàng
@@ -242,14 +218,12 @@ const Checkout = () => {
                     <Input
                       id="address"
                       value={formData.shippingAddress}
-                      onChange={(e) => handleInputChange("shippingAddress", e.target.value)}
+                      onChange={(e) => handleInputChange('shippingAddress', e.target.value)}
                       className="mt-1"
                       placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố"
                       required
                     />
                   </div>
-
-                  {/* Notes */}
                   <div>
                     <Label htmlFor="notes" className="text-sm font-medium">
                       Ghi chú đơn hàng (tùy chọn)
@@ -257,7 +231,7 @@ const Checkout = () => {
                     <Input
                       id="notes"
                       value={formData.notes}
-                      onChange={(e) => handleInputChange("notes", e.target.value)}
+                      onChange={(e) => handleInputChange('notes', e.target.value)}
                       className="mt-1"
                       placeholder="Ghi chú thêm cho đơn hàng..."
                     />
@@ -266,13 +240,10 @@ const Checkout = () => {
               </div>
             )}
 
-            {/* Step 2: Payment Method */}
             {currentStep === 2 && (
               <div>
                 <h2 className="text-2xl font-semibold mb-6">Phương thức thanh toán</h2>
-                
                 <div className="space-y-4">
-                  {/* VNPay Payment */}
                   <div className="border rounded-lg p-6 bg-blue-50 border-blue-200">
                     <div className="flex items-center space-x-3 mb-4">
                       <CreditCard className="w-8 h-8 text-blue-600" />
@@ -281,19 +252,17 @@ const Checkout = () => {
                         <p className="text-sm text-gray-600">Thanh toán an toàn qua cổng VNPay</p>
                       </div>
                     </div>
-                    
-                    {/* Bank Selection */}
                     <div className="space-y-3">
                       <Label className="text-sm font-medium">Chọn phương thức thanh toán (tùy chọn):</Label>
                       <RadioGroup
                         value={formData.bankCode}
-                        onValueChange={(value) => handleInputChange("bankCode", value)}
+                        onValueChange={(value) => handleInputChange('bankCode', value)}
                         className="grid grid-cols-1 gap-3"
                       >
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="" id="all" />
                           <label htmlFor="all" className="text-sm">
-                            Tất cả phương thức (chọn tại VNPay)
+                            Chuyển khoản ngân hàng (tất cả ngân hàng)
                           </label>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -316,7 +285,6 @@ const Checkout = () => {
                         </div>
                       </RadioGroup>
                     </div>
-
                     <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
                       <p className="text-sm text-yellow-800">
                         <strong>Lưu ý:</strong> Bạn sẽ được chuyển hướng đến cổng thanh toán VNPay để hoàn tất giao dịch.
@@ -327,19 +295,16 @@ const Checkout = () => {
               </div>
             )}
 
-            {/* Step 3: Order Review */}
             {currentStep === 3 && (
               <div>
                 <h2 className="text-2xl font-semibold mb-6">Xác nhận đơn hàng</h2>
-                
                 <div className="space-y-6">
-                  {/* Shipping Info Review */}
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between">
                         Thông tin giao hàng
-                        <Button 
-                          variant="link" 
+                        <Button
+                          variant="link"
                           onClick={() => setCurrentStep(1)}
                           className="text-cyan-700 p-0"
                         >
@@ -357,14 +322,12 @@ const Checkout = () => {
                       </div>
                     </CardContent>
                   </Card>
-                  
-                  {/* Payment Method Review */}
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between">
                         Phương thức thanh toán
-                        <Button 
-                          variant="link" 
+                        <Button
+                          variant="link"
                           onClick={() => setCurrentStep(2)}
                           className="text-cyan-700 p-0"
                         >
@@ -376,7 +339,7 @@ const Checkout = () => {
                       <div className="flex items-center space-x-3">
                         <CreditCard className="w-6 h-6 text-blue-600" />
                         <div>
-                          <p className="font-medium">Thanh toán qua VNPay</p>
+                          <p className="font-medium">Thanh toán qua chuyển khoản ngân hàng</p>
                           <p className="text-sm text-gray-600">
                             {formData.bankCode === 'VNPAYQR' && 'Thanh toán quét mã QR'}
                             {formData.bankCode === 'VNBANK' && 'Thẻ ATM - Ngân hàng nội địa'}
@@ -392,8 +355,6 @@ const Checkout = () => {
                       </div>
                     </CardContent>
                   </Card>
-
-                  {/* Order Items Review */}
                   <Card>
                     <CardHeader>
                       <CardTitle>Sản phẩm đặt mua</CardTitle>
@@ -403,7 +364,7 @@ const Checkout = () => {
                         {items.map((item) => (
                           <div key={item.id} className="flex gap-4 border-b pb-4">
                             <Image
-                              src={item.bookCoverUrl || "/default-book-cover.jpg"}
+                              src={item.bookCoverUrl || '/default-book-cover.jpg'}
                               alt={item.bookTitle}
                               width={60}
                               height={80}
@@ -417,7 +378,10 @@ const Checkout = () => {
                               <div className="flex justify-between items-center mt-2">
                                 <span className="text-sm">Số lượng: {item.quantity}</span>
                                 <span className="font-medium">
-                                  {(item.bookPrice * item.quantity).toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}
+                                  {(item.bookPrice * item.quantity).toLocaleString('vi-VN', {
+                                    style: 'currency',
+                                    currency: 'VND',
+                                  })}
                                 </span>
                               </div>
                             </div>
@@ -430,31 +394,32 @@ const Checkout = () => {
               </div>
             )}
 
-            {/* Navigation Buttons */}
             <div className="flex justify-between mt-8">
               {currentStep > 1 && (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setCurrentStep(currentStep - 1)}
                   disabled={isProcessing}
                 >
                   Quay lại
                 </Button>
               )}
-              
               <div className="flex gap-4 ml-auto">
                 <Link href="/thanh-toan/gio-hang">
                   <Button variant="outline" disabled={isProcessing}>
                     Quay lại giỏ hàng
                   </Button>
                 </Link>
-                
-                <Button 
+                <Button
                   className="bg-gradient-to-r from-cyan-700 to-cyan-900 hover:from-cyan-800 hover:to-cyan-950 text-white"
                   onClick={handleNext}
                   disabled={
                     isProcessing ||
-                    (currentStep === 1 && (!formData.email || !formData.shippingFullName || !formData.shippingPhone || !formData.shippingAddress))
+                    (currentStep === 1 &&
+                      (!formData.email ||
+                        !formData.shippingFullName ||
+                        !formData.shippingPhone ||
+                        !formData.shippingAddress))
                   }
                 >
                   {isProcessing ? (
@@ -464,7 +429,7 @@ const Checkout = () => {
                     </>
                   ) : (
                     <>
-                      {currentStep === 1 ? "Tiếp tục" : currentStep === 2 ? "Xem lại đơn hàng" : "Thanh toán qua VNPay"}
+                      {currentStep === 1 ? 'Tiếp tục' : currentStep === 2 ? 'Tiếp tục' : 'Thanh toán qua VNPay'}
                     </>
                   )}
                 </Button>
@@ -472,7 +437,6 @@ const Checkout = () => {
             </div>
           </div>
 
-          {/* Order Summary Sidebar */}
           <div className="lg:col-span-1">
             <Card className="sticky top-4">
               <CardHeader className="flex flex-row items-center justify-between">
@@ -485,13 +449,12 @@ const Checkout = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {/* Order Items Summary */}
                   <div className="space-y-3 max-h-64 overflow-y-auto">
                     {items.map((item) => (
                       <div key={item.id} className="flex gap-3">
                         <div className="relative w-12 h-16 flex-shrink-0">
                           <Image
-                            src={item.bookCoverUrl || "/default-book-cover.jpg"}
+                            src={item.bookCoverUrl || '/default-book-cover.jpg'}
                             alt={item.bookTitle}
                             width={48}
                             height={64}
@@ -507,13 +470,15 @@ const Checkout = () => {
                             {item.version === 'color' ? 'Bản màu' : 'Bản đen trắng'}
                           </p>
                           <p className="text-sm font-medium mt-1">
-                            {(item.bookPrice * item.quantity).toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}
+                            {(item.bookPrice * item.quantity).toLocaleString('vi-VN', {
+                              style: 'currency',
+                              currency: 'VND',
+                            })}
                           </p>
                         </div>
                       </div>
                     ))}
                   </div>
-
                   <div className="border-t pt-4 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Tạm tính</span>
@@ -532,8 +497,6 @@ const Checkout = () => {
                       </div>
                     </div>
                   </div>
-
-                  {/* Shipping Info */}
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                     <div className="flex items-center gap-2 text-green-700">
                       <Truck className="w-4 h-4" />
@@ -543,8 +506,6 @@ const Checkout = () => {
                       Giao hàng trong 2-3 ngày làm việc
                     </p>
                   </div>
-
-                  {/* Payment Security */}
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <div className="flex items-center gap-2 text-blue-700">
                       <CreditCard className="w-4 h-4" />
@@ -554,8 +515,6 @@ const Checkout = () => {
                       Được bảo mật bởi VNPay
                     </p>
                   </div>
-
-                  {/* Security Notice */}
                   <div className="text-xs text-muted-foreground text-center">
                     <p>🔒 Thông tin của bạn được bảo mật an toàn</p>
                   </div>

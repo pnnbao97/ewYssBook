@@ -10,14 +10,21 @@ import CartModal from './CartModal';
 
 interface HeaderProps {
   onMobileMenuClick: () => void;
+  onSearch?: (query: string) => void;
+  searchQuery?: string;
 }
 
-export const Header = ({ onMobileMenuClick }: HeaderProps) => {
-  const [searchQuery, setSearchQuery] = useState('');
+export const Header = ({ onMobileMenuClick, onSearch, searchQuery = "" }: HeaderProps) => {
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
   const { user } = useUser();
   const { totalItems } = useCartStore();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const cartRef = useRef<HTMLDivElement>(null);
+
+  // Update local search when prop changes
+  useEffect(() => {
+    setLocalSearchQuery(searchQuery);
+  }, [searchQuery]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -35,13 +42,25 @@ export const Header = ({ onMobileMenuClick }: HeaderProps) => {
     };
   }, [isCartOpen]);
 
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (onSearch) {
+      onSearch(localSearchQuery.trim());
+    }
+  };
+
+  const handleSearchKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearchSubmit(e);
+    }
+  };
+
   return (
     <header className="bg-background border-b sticky top-0 z-[60] md:z-[70]">
       {/* Top bar */}
       <div className="bg-muted/30 px-4 py-2 text-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-6 text-muted-foreground">
-            {/* <span>Cần trợ giúp ?</span> */}
             <span className="flex items-center gap-1">
               🚚 Giao hàng miễn phí
             </span>
@@ -84,8 +103,6 @@ export const Header = ({ onMobileMenuClick }: HeaderProps) => {
                   }}
                 />
               </SignedIn>
-            </div>
-            <div className="flex items-center gap-1">
             </div>
             
             {/* Desktop Cart - Fixed */}
@@ -167,30 +184,23 @@ export const Header = ({ onMobileMenuClick }: HeaderProps) => {
 
           {/* Search bar - responsive for mobile */}
           <div className="flex flex-1 max-w-2xl mx-4 md:mx-8">
-            <div className="flex w-full">
-              {/* Mobile: Hide category selector, show only on md+ */}
-              {/* <Select defaultValue="all">
-                <SelectTrigger className="w-40 rounded-r-none border-r-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
-                  <SelectItem value="books">Sách</SelectItem>
-                  <SelectItem value="ebooks">Livebook</SelectItem>
-                </SelectContent>
-              </Select> */}
+            <form onSubmit={handleSearchSubmit} className="flex w-full">
               <div className="relative flex-1">
                 <Input
                   placeholder="Tìm kiếm sách..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="md:rounded  focus-visible:ring-0 text-sm"
+                  value={localSearchQuery}
+                  onChange={(e) => setLocalSearchQuery(e.target.value)}
+                  onKeyPress={handleSearchKeyPress}
+                  className="md:rounded focus-visible:ring-0 text-sm"
                 />
               </div>
-              <Button className="md:rounded-l-none rounded-l-none">
+              <Button 
+                type="submit"
+                className="md:rounded-l-none rounded-l-none"
+              >
                 <Search className="h-4 w-4" />
               </Button>
-            </div>
+            </form>
           </div>
         </div>
       </div>

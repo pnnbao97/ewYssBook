@@ -41,8 +41,18 @@ model Book {
   predictableReleaseDate DateTime?
   colorPrice             Int
   blackAndWhitePrice     Int
+  livebookPrice           Int?
   hasColorPriceSale      Boolean     @default(false)
   colorPriceSale         Int?
+  isSeries               Boolean     @default(false)
+  seriesName             String?
+  seriesLink             String?
+  hasMoreThanOneVolume  Boolean     @default(false)
+  volumeCount            Int?
+  allVolumePriceForColor Int?
+  allVolumePriceForBlackAndWhite Int?
+  allVolumePriceForLivebook Int?
+  allVolumeLink          String?
   createdAt              DateTime    @default(now())
   updatedAt              DateTime    @updatedAt
   orderItems             OrderItem[]
@@ -147,4 +157,5 @@ enum OrderStatus {
 enum BookVersion {
   color
   black_and_white
+  livebook
 }
