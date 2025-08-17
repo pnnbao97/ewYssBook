@@ -85,7 +85,7 @@ const CartModal = () => {
     return (
       <div key={item.id} className="flex gap-4">
         <Image
-          src={item.bookCoverUrl || "/default-book-cover.jpg"}
+          src={item.bookCoverUrl || "/placeholder-book.png"}
           alt={item.bookTitle || `Book ${item.bookId}`}
           width={72}
           height={96}
@@ -98,7 +98,7 @@ const CartModal = () => {
                 href={`/sach/${item.bookSlug}`} 
                 className="text-amber-700 font-semibold hover:underline"
               >
-                {item.bookTitle || `Book ${item.bookId}`}
+                {item.bookTitle || `Sách ${item.bookId}`}
               </Link>
               <div className="font-normal text-amber-900">
                 {itemPrice.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}

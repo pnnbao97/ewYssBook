@@ -8,6 +8,7 @@ import Footer from "@/components/Footer";
 import { useState, useEffect } from "react";
 import { getAllBooks, getBooksByCategory, searchBooks, getCategoriesWithCount } from "@/lib/actions/get-books";
 import { Book } from "@/lib/generated/prisma";
+import { useSearchParams } from 'next/navigation';
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -18,6 +19,15 @@ export default function Home() {
   const [categories, setCategories] = useState<{ name: string; count: number }[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const searchParams = useSearchParams();
+
+  // Check for search query in URL params
+  useEffect(() => {
+    const search = searchParams.get('search');
+    if (search) {
+      setSearchQuery(search);
+    }
+  }, [searchParams]);
 
   const handleMobileMenuClick = () => {
     setSidebarOpen(true);
@@ -25,6 +35,12 @@ export default function Home() {
 
   const handleSidebarClose = () => {
     setSidebarOpen(false);
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setSelectedCategory(null); // Clear category when searching
+    setCurrentPage(1); // Reset to first page
   };
 
   // Load categories on mount
@@ -67,12 +83,6 @@ export default function Home() {
     setSearchQuery(""); // Clear search when selecting category
     setCurrentPage(1); // Reset to first page
     setSidebarOpen(false); // Close mobile sidebar
-  };
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setSelectedCategory(null); // Clear category when searching
-    setCurrentPage(1); // Reset to first page
   };
 
   const handlePageChange = (page: number) => {

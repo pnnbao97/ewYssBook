@@ -141,14 +141,14 @@ const Cart = () => {
                           <div className="relative w-20 h-24 flex-shrink-0">
                             <Image
                               src={item.bookCoverUrl || "/default-book-cover.jpg"}
-                              alt={item.bookTitle || `Book ${item.bookId}`}
+                              alt={item.bookTitle || `Sách ${item.bookId}`}
                               width={80}
                               height={96}
                               className="w-full h-full object-cover rounded"
                             />
                             {hasDiscount && (
                               <Badge variant="destructive" className="absolute -top-2 -right-2 text-xs">
-                                SALE
+                                GIẢM GIÁ
                               </Badge>
                             )}
                           </div>
@@ -157,7 +157,7 @@ const Cart = () => {
                               href={`/sach/${item.bookSlug}`}
                               className="font-medium text-sm mb-1 hover:underline text-amber-700"
                             >
-                              {item.bookTitle || `Book ${item.bookId}`}
+                              {item.bookTitle || `Sách ${item.bookId}`}
                             </Link>
                             <p className="text-xs text-muted-foreground mb-1">
                               Phiên bản: {item.version === 'color' ? 'Bản màu' : 'Bản đen trắng'}

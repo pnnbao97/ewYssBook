@@ -62,11 +62,20 @@ export default function ProductCard({
               alt={title}
               className="w-full h-48 object-cover rounded-md hover:opacity-90 cursor-pointer transition-opacity"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = '/placeholder-book.png';
+                const img = e.target as HTMLImageElement;
+                // Only set placeholder if we haven't already tried
+                if (img.src !== '/placeholder-book.png') {
+                  img.src = '/placeholder-book.png';
+                  img.onerror = null; // Prevent infinite retry loop
+                }
               }}
             />
           </Link>
-          <button className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity">
+          <button 
+            type="button"
+            className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+            aria-label="Add to favorites"
+          >
             <Heart className="w-4 h-4 text-gray-400 hover:text-red-500" />
           </button>
         </div>

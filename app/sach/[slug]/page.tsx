@@ -13,7 +13,7 @@ const SEO_CONFIG = {
   TRUNCATE_AT: 152,
   SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || 'https://www.ewyss.com',
   FACEBOOK_APP_ID: process.env.FACEBOOK_APP_ID || '',
-  DEFAULT_BOOK_COVER: '/default-book-cover.jpg',
+  DEFAULT_BOOK_COVER: '/placeholder-book.png',
   TWITTER_HANDLE: '@ewYss',
 } as const;
 

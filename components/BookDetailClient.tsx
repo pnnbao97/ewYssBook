@@ -47,7 +47,7 @@ const BookDetailClient = ({ initialBook, medicalSpecialties }: BookDetailClientP
   const [selectedVersion, setSelectedVersion] = useState<'color' | 'photo'>('color');
   const [displayPrice, setDisplayPrice] = useState<number>(
     (initialBook.hasColorPriceSale
-      ? initialBook.colorPrice - initialBook.colorPriceSale
+      ? initialBook.colorPrice - (initialBook?.colorPriceSale ?? 0)
       : initialBook.colorPrice)
   );
   const [activeTab, setActiveTab] = useState('description');
@@ -97,7 +97,7 @@ const BookDetailClient = ({ initialBook, medicalSpecialties }: BookDetailClientP
         {initialBook.hasColorPriceSale && (
           <div className="mb-6">
             <Badge className="text-sm py-1 px-3">
-              {Math.round(((initialBook.colorPriceSale / initialBook.colorPrice) * 100))}% OFF
+              {Math.round(((initialBook?.colorPriceSale ?? 0 / initialBook.colorPrice) * 100))}% OFF
             </Badge>
           </div>
         )}
@@ -141,7 +141,7 @@ const BookDetailClient = ({ initialBook, medicalSpecialties }: BookDetailClientP
               {(!initialBook.isPublished && initialBook.availableForPreorder) && (
                 <div className="flex items-center gap-2 mt-4">
                   <Badge className="bg-gradient-to-r from-cyan-500 to-cyan-700 text-white">MỚI</Badge>
-                  <span className="text-sm">Sách sẽ được phát hành vào {format(new Date(initialBook.predictableReleaseDate), 'dd-MM-yyyy')}</span>
+                  <span className="text-sm">Sách sẽ được phát hành vào {format(new Date(initialBook.predictableReleaseDate ?? ''), 'dd-MM-yyyy')}</span>
                 </div>
               )}
 
@@ -198,8 +198,8 @@ const BookDetailClient = ({ initialBook, medicalSpecialties }: BookDetailClientP
                       <CustomizeProducts
                         colorPrice={initialBook.colorPrice}
                         photoPrice={initialBook.blackAndWhitePrice}
-                        hasColorSale={initialBook.hasColorPriceSale}
-                        colorSaleAmount={initialBook.colorPriceSale}
+                        hasColorSale={initialBook.hasColorPriceSale ?? false}
+                        colorSaleAmount={initialBook.colorPriceSale ?? 0}
                         book={{
                           title: initialBook.title,
                           slug: initialBook.slug,
@@ -213,13 +213,13 @@ const BookDetailClient = ({ initialBook, medicalSpecialties }: BookDetailClientP
                     <div className="border-t pt-6">
                       <Suspense fallback={<ComponentSkeleton />}>
                         <Add
-                          bookId={initialBook.id}
+                          bookId={Number(initialBook.id)}
                           isCompleted={initialBook.isPublished}
                           preorder={initialBook.availableForPreorder}
                           selectedVersion={selectedVersion}
                           bookTitle={initialBook.title}
                           bookPrice={displayPrice}
-                          bookSalePrice={initialBook.hasColorPriceSale ? initialBook.colorPrice - initialBook.colorPriceSale : undefined}
+                          bookSalePrice={initialBook.hasColorPriceSale ? initialBook.colorPrice - (initialBook.colorPriceSale ?? 0) : undefined}
                           bookSlug={initialBook.slug}
                           bookCoverUrl={initialBook.coverImageUrl}
                         />

@@ -1,19 +1,28 @@
 import React from 'react'
 import { onAuthenticateUser } from '@/lib/actions/users'
 import { ClerkLoading, SignInButton } from '@clerk/nextjs'
-// import { Header } from '@/components/Header'
+import { Header } from '@/components/Header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Lock, User, BookOpen, Shield } from 'lucide-react'
 
 const layout = async ({children}: {children: React.ReactNode}) => {
+    // Allow free access in development to unblock dev/testing flows
+    if (process.env.NODE_ENV === 'development') {
+        return (
+            <div className="min-h-screen bg-background">
+                {children}
+            </div>
+        )
+    }
+
     const userData = await onAuthenticateUser()
-    
+
     if (userData.status !== 200 && userData.status !== 201) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-50 to-cyan-50">
-                {/* <Header onMobileMenuClick={() => {}} /> */}
-                
+                <Header />
+
                 <div className="container mx-auto px-4 py-12">
                     <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
                         <Card className="w-full max-w-md shadow-xl border-0 bg-white/80 backdrop-blur-sm">
@@ -100,7 +109,7 @@ const layout = async ({children}: {children: React.ReactNode}) => {
     return (
         <div className="min-h-screen bg-background">
             {children}
-            
+
             {/* Loading overlay for authenticated users */}
             <ClerkLoading>
                 <div className="fixed inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50">

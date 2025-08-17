@@ -65,8 +65,8 @@ export default function MainNavigation() {
           <a href="#" className="px-4 py-4 hover:bg-[#2c4a54] transition-colors font-medium md:text-lg text-xs">
             CẬP NHẬT GUIDELINE
           </a>
-        </div>
-      </div>
-    </nav>
+                 </div>
+       </div>
+     </nav>
   );
 }

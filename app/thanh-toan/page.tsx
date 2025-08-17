@@ -93,7 +93,7 @@ const Checkout = () => {
         sessionStorage.setItem('pendingOrder', JSON.stringify(orderData));
         window.location.href = result.paymentUrl;
       } else {
-        throw new Error(result.error || 'Failed to create payment');
+        throw new Error(result.error || 'Không thể tạo thanh toán');
       }
     } catch (error) {
       console.error('Payment creation error:', error);

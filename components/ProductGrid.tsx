@@ -73,13 +73,13 @@ export default function ProductGrid({
         <div className="border-b border-gray-200 mb-6">
           <div className="flex space-x-4 sm:space-x-8">
             <button className="pb-2 border-b-2 border-[#a45827] text-[#a45827] font-medium text-sm">
-              BOOK
+              SÁCH
             </button>
             <button className="pb-2 text-gray-500 hover:text-gray-700 text-sm">
-              EBOOK
+              SÁCH ĐIỆN TỬ
             </button>
             <button className="pb-2 text-gray-500 hover:text-gray-700 text-sm">
-              JOURNAL
+              TẠP CHÍ
             </button>
           </div>
         </div>

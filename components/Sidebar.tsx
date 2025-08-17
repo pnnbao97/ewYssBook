@@ -101,8 +101,10 @@ export default function Sidebar({
         {onClose && (
           <div className="md:hidden flex justify-end p-4 border-b">
             <button 
+              type="button"
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-full"
+              aria-label="Close sidebar"
             >
               <X className="h-5 w-5" />
             </button>
@@ -160,7 +162,7 @@ export default function Sidebar({
               </div>
               <div className="flex items-center">
                 <input type="checkbox" id="ebook" className="mr-2" />
-                <label htmlFor="ebook" className="text-sm">Livebook</label>
+                <label htmlFor="ebook" className="text-sm">Sách điện tử</label>
               </div>
             </div>
           </FilterSection>
@@ -169,11 +171,11 @@ export default function Sidebar({
             <div className="space-y-2">
               <div className="flex items-center">
                 <input type="checkbox" id="clinics" className="mr-2" />
-                <label htmlFor="clinics" className="text-sm">USMLE Series</label>
+                <label htmlFor="clinics" className="text-sm">Bộ sách USMLE</label>
               </div>
               <div className="flex items-center">
                 <input type="checkbox" id="handbook" className="mr-2" />
-                <label htmlFor="handbook" className="text-sm">Secret Series</label>
+                <label htmlFor="handbook" className="text-sm">Bộ sách Secret</label>
               </div>
             </div>
           </FilterSection>

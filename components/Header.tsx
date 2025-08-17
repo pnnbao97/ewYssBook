@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import MainNavigation from './MainNavigation';
 import { useCartStore } from '@/hooks/use-cart';
 import CartModal from './CartModal';
+import { useRouter } from 'next/navigation';
 
 interface HeaderProps {
-  onMobileMenuClick: () => void;
+  onMobileMenuClick?: () => void;
   onSearch?: (query: string) => void;
   searchQuery?: string;
 }
@@ -20,6 +21,7 @@ export const Header = ({ onMobileMenuClick, onSearch, searchQuery = "" }: Header
   const { totalItems } = useCartStore();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const cartRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   // Update local search when prop changes
   useEffect(() => {
@@ -46,12 +48,21 @@ export const Header = ({ onMobileMenuClick, onSearch, searchQuery = "" }: Header
     e.preventDefault();
     if (onSearch) {
       onSearch(localSearchQuery.trim());
+    } else {
+      // Default search behavior - navigate to books page with search
+      router.push(`/sach?search=${encodeURIComponent(localSearchQuery.trim())}`);
     }
   };
 
   const handleSearchKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleSearchSubmit(e);
+    }
+  };
+
+  const handleMobileMenuClick = () => {
+    if (onMobileMenuClick) {
+      onMobileMenuClick();
     }
   };
 
@@ -166,7 +177,7 @@ export const Header = ({ onMobileMenuClick, onSearch, searchQuery = "" }: Header
               {isCartOpen && <CartModal />}
             </div>
             
-            <Button variant="ghost" size="icon" onClick={onMobileMenuClick}>
+            <Button variant="ghost" size="icon" onClick={handleMobileMenuClick}>
               <Menu className="h-5 w-5" />
             </Button>
           </div>
