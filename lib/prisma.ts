@@ -1,12 +1,6 @@
 import { PrismaClient } from '../lib/generated/prisma'
-import { withAccelerate } from '@prisma/extension-accelerate'
 
-const globalForPrisma = global as unknown as { 
-    prisma: PrismaClient
-}
-
-const prisma = globalForPrisma.prisma || new PrismaClient().$extends(withAccelerate())
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+// Chỉ khởi tạo, không có logic gì khác
+const prisma = new PrismaClient()
 
 export default prisma
