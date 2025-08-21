@@ -8,7 +8,7 @@ export const onAuthenticateUser = async () => {
         if (!user) {
             return { status: 403 , message: "User not authenticated" }
         }
-        console.log("Authenticated user:", user)
+        // console.log("Authenticated user:", user)
 
         const userExist = await prisma.user.findUnique({
             where: { clerkId: user.id },
