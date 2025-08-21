@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "prisma generate && next build",
-    "postinstall": "prisma generate",
-    "start": "next start",
+    "postinstall": "prisma generate && npm run copy-prisma-engines",
+    "copy-prisma-engines": "cp node_modules/.prisma/client/libquery_engine-rhel-openssl-3.0.x.so.node lib/generated/prisma/ || true",
     "lint": "next lint"
   },
   "dependencies": {
