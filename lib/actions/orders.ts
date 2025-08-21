@@ -1,7 +1,7 @@
 'use server';
 
 import prisma from '@/lib/prisma';
-import { PaymentStatus, OrderStatus } from '@/lib/generated/prisma';
+import { PaymentStatus, OrderStatus } from '@prisma/client';
 
 
 // Generate unique order number

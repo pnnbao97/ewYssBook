@@ -1,7 +1,7 @@
 // lib/actions/get-books.ts
 'use server'
 import prisma from "@/lib/prisma";
-import { Book } from "@/lib/generated/prisma";
+import { Book } from "@prisma/client";
 
 export async function getBookBySlug(slug: string): Promise<{ success: boolean; data?: Book; message?: string }> {
     try {

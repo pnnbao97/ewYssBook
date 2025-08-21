@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { VNPayService } from '@/lib/vnpay';
 import { updateOrderStatus } from '@/lib/actions/orders';
-import { PaymentStatus, OrderStatus } from '@/lib/generated/prisma';
+import { PaymentStatus, OrderStatus } from '@prisma/client';
 import prisma from '@/lib/prisma';
 
 async function handleVNPayIPN(request: NextRequest) {
