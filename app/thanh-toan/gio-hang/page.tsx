@@ -249,15 +249,15 @@ const Cart = () => {
 
                 {/* Cart Actions */}
                 <div className="flex flex-col sm:flex-row gap-4 pt-6">
-                  <Button variant="outline" onClick={() => clearCart()}>
+                  {/* <Button variant="outline" onClick={() => clearCart()}>
                     XÓA GIỎ HÀNG
                   </Button>
                   <Button variant="outline">
                     CẬP NHẬT GIỎ HÀNG
-                  </Button>
-                  <Button variant="link" className="text-primary">
-                    <Link href="/">TIẾP TỤC MUA SẮM</Link>
-                  </Button>
+                  </Button> */}
+                  {/* <Button variant="outline" className="text-primary">
+                    <Link href="/">Chọn thêm sách</Link>
+                  </Button> */}
                 </div>
               </div>
             )}
