@@ -50,59 +50,6 @@ function generateSignature(params: { [key: string]: any }, privateKey: string, v
   return hash;
 }
 
-// For debugging - try variations if standard doesn't work
-function debugSignatureVariations(params: { [key: string]: any }, privateKey: string) {
-  const paramsForSign = { ...params };
-  delete paramsForSign.sig;
-  
-  const variations = [];
-  
-  // Standard Paymentwall format (from docs)
-  const sortedKeys = Object.keys(paramsForSign).sort();
-  let baseString = '';
-  sortedKeys.forEach(key => {
-    let value = paramsForSign[key];
-    if (value === false) value = '0';
-    baseString += key + '=' + value;
-  });
-  baseString += privateKey;
-  
-  variations.push({
-    name: 'Standard (docs format)',
-    base: baseString,
-    md5: crypto.createHash('md5').update(baseString).digest('hex'),
-    sha256: crypto.createHash('sha256').update(baseString).digest('hex')
-  });
-  
-  // Try with uppercase private key
-  const upperBaseString = baseString.replace(privateKey, privateKey.toUpperCase());
-  variations.push({
-    name: 'With uppercase private key',
-    base: upperBaseString,
-    md5: crypto.createHash('md5').update(upperBaseString).digest('hex'),
-    sha256: crypto.createHash('sha256').update(upperBaseString).digest('hex')
-  });
-  
-  // Try converting string 'false'/'true' to 0/1
-  let baseStringConverted = '';
-  sortedKeys.forEach(key => {
-    let value = paramsForSign[key];
-    if (value === false || value === 'false') value = '0';
-    else if (value === true || value === 'true') value = '1';
-    baseStringConverted += key + '=' + value;
-  });
-  baseStringConverted += privateKey;
-  
-  variations.push({
-    name: 'Convert string false/true to 0/1',
-    base: baseStringConverted,
-    md5: crypto.createHash('md5').update(baseStringConverted).digest('hex'),
-    sha256: crypto.createHash('sha256').update(baseStringConverted).digest('hex')
-  });
-  
-  return variations;
-}
-
 export async function GET(request: NextRequest) {
   try {
     // Get all query parameters
@@ -112,6 +59,11 @@ export async function GET(request: NextRequest) {
     searchParams.forEach((value, key) => {
       params[key] = value;
     });
+    
+    // Add missing speriod parameter if not present (Paymentwall includes this in signature)
+    if (!params.speriod) {
+      params.speriod = '';
+    }
 
     console.log('Received pingback:', params);
 
@@ -138,21 +90,21 @@ export async function GET(request: NextRequest) {
     let isValidSignature = receivedSignature === calculatedSignature;
     
     // If standard doesn't match, try debug variations
-    if (!isValidSignature) {
-      console.log('\n=== Trying variations ===');
-      const variations = debugSignatureVariations(params, PAYMENTWALL_CONFIG.privateKey);
+    // if (!isValidSignature) {
+    //   console.log('\n=== Trying variations ===');
+    //   const variations = debugSignatureVariations(params, PAYMENTWALL_CONFIG.privateKey);
       
-      variations.forEach(variation => {
-        console.log(`\n${variation.name}:`);
-        console.log(`Base: ${variation.base}`);
-        console.log(`MD5: ${variation.md5} ${variation.md5 === receivedSignature ? '✅ MATCH' : ''}`);
-        console.log(`SHA256: ${variation.sha256} ${variation.sha256 === receivedSignature ? '✅ MATCH' : ''}`);
+    //   variations.forEach(variation => {
+    //     console.log(`\n${variation.name}:`);
+    //     console.log(`Base: ${variation.base}`);
+    //     console.log(`MD5: ${variation.md5} ${variation.md5 === receivedSignature ? '✅ MATCH' : ''}`);
+    //     console.log(`SHA256: ${variation.sha256} ${variation.sha256 === receivedSignature ? '✅ MATCH' : ''}`);
         
-        if (variation.md5 === receivedSignature || variation.sha256 === receivedSignature) {
-          isValidSignature = true;
-        }
-      });
-    }
+    //     if (variation.md5 === receivedSignature || variation.sha256 === receivedSignature) {
+    //       isValidSignature = true;
+    //     }
+    //   });
+    // }
 
     if (!isValidSignature) {
       console.error('\n❌ Invalid pingback signature - no variation matched');
