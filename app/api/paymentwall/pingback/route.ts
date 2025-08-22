@@ -7,6 +7,49 @@ const PAYMENTWALL_CONFIG = {
   privateKey: process.env.PAYMENTWALL_PRIVATE_KEY!,
 };
 
+// Alternative signature generation (try this if the main one fails)
+function generateSignatureAlternative(params: { [key: string]: any }, privateKey: string) {
+  const paramsForSign = { ...params };
+  delete paramsForSign.sig;
+  
+  // Convert all values to strings and handle special cases
+  Object.keys(paramsForSign).forEach(key => {
+    let value = paramsForSign[key];
+    if (value === false || value === 'false') {
+      paramsForSign[key] = '0';
+    } else if (value === true || value === 'true') {
+      paramsForSign[key] = '1';
+    } else {
+      paramsForSign[key] = String(value);
+    }
+  });
+  
+  // Sort keys
+  const sortedKeys = Object.keys(paramsForSign).sort();
+  
+  // Try different formats
+  const formats = [
+    // Format 1: key=value concatenated
+    sortedKeys.map(key => `${key}=${paramsForSign[key]}`).join(''),
+    // Format 2: key=value with & separator  
+    sortedKeys.map(key => `${key}=${paramsForSign[key]}`).join('&'),
+    // Format 3: values only concatenated
+    sortedKeys.map(key => paramsForSign[key]).join(''),
+  ];
+  
+  console.log('Trying different signature formats:');
+  formats.forEach((format, index) => {
+    const signatureString = format + privateKey;
+    const hash = crypto.createHash('md5').update(signatureString).digest('hex');
+    console.log(`Format ${index + 1}: "${format}" -> ${hash}`);
+  });
+  
+  // Return format 1 (original)
+  const baseString = formats[0];
+  const signatureString = baseString + privateKey;
+  return crypto.createHash('md5').update(signatureString).digest('hex');
+}
+
 // Generate signature for pingback validation
 function generateSignature(params: { [key: string]: any }, privateKey: string, version = 2) {
   const paramsForSign = { ...params };
@@ -15,24 +58,48 @@ function generateSignature(params: { [key: string]: any }, privateKey: string, v
   // Sort parameters alphabetically
   const sortedKeys = Object.keys(paramsForSign).sort();
   
-  // Create base string with proper value conversion
-  const baseString = sortedKeys
-    .map(key => {
-      let value = paramsForSign[key];
-      
-      // Convert boolean false to '0', boolean true to '1'
-      if (value === false || value === 'false') {
-        value = '0';
-      } else if (value === true || value === 'true') {
-        value = '1';
-      }
-      
-      // Convert to string if not already
-      value = String(value);
-      
-      return `${key}=${value}`;
-    })
-    .join('');
+  // Create base string according to Paymentwall documentation
+  let baseString;
+  
+  if (version === 3) {
+    // For version 3: key=value&key=value format
+    baseString = sortedKeys
+      .map(key => {
+        let value = paramsForSign[key];
+        
+        // Convert boolean false to '0', boolean true to '1'
+        if (value === false || value === 'false') {
+          value = '0';
+        } else if (value === true || value === 'true') {
+          value = '1';
+        }
+        
+        // Convert to string if not already
+        value = String(value);
+        
+        return `${key}=${value}`;
+      })
+      .join('&');
+  } else {
+    // For version 2 and below: concatenated key=value format (no separators)
+    baseString = sortedKeys
+      .map(key => {
+        let value = paramsForSign[key];
+        
+        // Convert boolean false to '0', boolean true to '1'
+        if (value === false || value === 'false') {
+          value = '0';
+        } else if (value === true || value === 'true') {
+          value = '1';
+        }
+        
+        // Convert to string if not already
+        value = String(value);
+        
+        return `${key}=${value}`;
+      })
+      .join('');
+  }
 
   const signatureString = baseString + privateKey;
   
@@ -70,13 +137,27 @@ export async function GET(request: NextRequest) {
     // Validate signature
     const receivedSignature = params.sig;
     const signVersion = params.sign_version ? parseInt(params.sign_version) : 2;
+    
+    console.log('All parameters received:', JSON.stringify(params, null, 2));
+    console.log('Private key length:', PAYMENTWALL_CONFIG.privateKey.length);
+    console.log('Private key first/last 4 chars:', 
+      PAYMENTWALL_CONFIG.privateKey.substring(0, 4) + '...' + 
+      PAYMENTWALL_CONFIG.privateKey.substring(PAYMENTWALL_CONFIG.privateKey.length - 4)
+    );
+    
     const calculatedSignature = generateSignature(params, PAYMENTWALL_CONFIG.privateKey, signVersion);
+    const alternativeSignature = generateSignatureAlternative(params, PAYMENTWALL_CONFIG.privateKey);
     
     console.log('Received signature:', receivedSignature);
-    console.log('Calculated signature:', calculatedSignature);
+    console.log('Calculated signature (main):', calculatedSignature);
+    console.log('Alternative signature:', alternativeSignature);
     console.log('Sign version:', signVersion);
 
-    if (receivedSignature !== calculatedSignature) {
+    // Try both signature methods
+    const isValidSignature = (receivedSignature === calculatedSignature) || 
+                           (receivedSignature === alternativeSignature);
+
+    if (!isValidSignature) {
       console.error('Invalid pingback signature');
       console.log('Parameters used for signature:', JSON.stringify(params, null, 2));
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
