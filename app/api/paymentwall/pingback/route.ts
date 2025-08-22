@@ -7,86 +7,100 @@ const PAYMENTWALL_CONFIG = {
   privateKey: process.env.PAYMENTWALL_PRIVATE_KEY!,
 };
 
-// Generate signature with multiple methods to match Paymentwall's format
-function generateSignatureVariants(params: { [key: string]: any }, privateKey: string) {
+// Generate signature exactly as per Paymentwall documentation
+function generateSignature(params: { [key: string]: any }, privateKey: string, version = 2) {
   const paramsForSign = { ...params };
   delete paramsForSign.sig; // Remove signature from params
   
-  // Convert all values to strings and handle special cases
-  Object.keys(paramsForSign).forEach(key => {
-    let value = paramsForSign[key];
-    if (value === false || value === 'false') {
-      paramsForSign[key] = '0';
-    } else if (value === true || value === 'true') {
-      paramsForSign[key] = '1';
-    } else {
-      paramsForSign[key] = String(value);
-    }
-  });
-  
-  // Sort keys alphabetically
+  // Sort parameters alphabetically by key name
   const sortedKeys = Object.keys(paramsForSign).sort();
   
-  const variants = [];
+  // Create base string according to Paymentwall docs:
+  // "PARAM_NAME_1=PARAM_VALUE_1PARAM_NAME_2=PARAM_VALUE_2...PARAM_NAME_n=PARAM_VALUE_nSECRET_KEY"
+  let baseString = '';
   
-  // Variant 1: key=value concatenated (no separators)
-  const format1 = sortedKeys.map(key => `${key}=${paramsForSign[key]}`).join('');
-  variants.push({
-    name: 'Format 1 (key=value concatenated)',
-    baseString: format1,
-    signature: crypto.createHash('md5').update(format1 + privateKey).digest('hex')
+  sortedKeys.forEach(key => {
+    let value = paramsForSign[key];
+    
+    // Handle boolean false as '0' (from docs: $value === false ? '0' : $value)
+    if (value === false) {
+      value = '0';
+    }
+    // Keep all other values as-is (including string 'false', 'true', etc.)
+    
+    baseString += key + '=' + value;
   });
   
-  // Variant 2: key=value with & separator
-  const format2 = sortedKeys.map(key => `${key}=${paramsForSign[key]}`).join('&');
-  variants.push({
-    name: 'Format 2 (key=value with &)',
-    baseString: format2,
-    signature: crypto.createHash('md5').update(format2 + privateKey).digest('hex')
-  });
+  // Append private key at the end
+  baseString += privateKey;
   
-  // Variant 3: values only concatenated
-  const format3 = sortedKeys.map(key => paramsForSign[key]).join('');
-  variants.push({
-    name: 'Format 3 (values only)',
-    baseString: format3,
-    signature: crypto.createHash('md5').update(format3 + privateKey).digest('hex')
-  });
+  console.log('Signature calculation:');
+  console.log('- Sorted keys:', sortedKeys);
+  console.log('- Base string:', baseString);
+  console.log('- Using hash:', version === 3 ? 'SHA256' : 'MD5');
   
-  // Variant 4: Try without sorting keys (original order)
-  const originalKeys = Object.keys(paramsForSign);
-  const format4 = originalKeys.map(key => `${key}=${paramsForSign[key]}`).join('');
-  variants.push({
-    name: 'Format 4 (original key order)',
-    baseString: format4,
-    signature: crypto.createHash('md5').update(format4 + privateKey).digest('hex')
-  });
+  // Calculate hash based on version
+  let hash;
+  if (version === 3) {
+    hash = crypto.createHash('sha256').update(baseString).digest('hex');
+  } else {
+    hash = crypto.createHash('md5').update(baseString).digest('hex');
+  }
   
-  // Variant 5: Try with URL encoding
-  const format5 = sortedKeys.map(key => `${key}=${encodeURIComponent(paramsForSign[key])}`).join('');
-  variants.push({
-    name: 'Format 5 (URL encoded)',
-    baseString: format5,
-    signature: crypto.createHash('md5').update(format5 + privateKey).digest('hex')
-  });
-  
-  // Variant 6: Try Paymentwall Widget signature format
-  const format6 = sortedKeys.map(key => paramsForSign[key]).join('#') + '#' + privateKey;
-  variants.push({
-    name: 'Format 6 (Widget format)',
-    baseString: format6,
-    signature: crypto.createHash('sha256').update(format6).digest('hex')
-  });
-  
-  // Variant 7: Try with different private key position
-  const format7 = privateKey + sortedKeys.map(key => `${key}=${paramsForSign[key]}`).join('');
-  variants.push({
-    name: 'Format 7 (private key first)',
-    baseString: format7,
-    signature: crypto.createHash('md5').update(format7).digest('hex')
-  });
+  return hash;
+}
 
-  return variants;
+// For debugging - try variations if standard doesn't work
+function debugSignatureVariations(params: { [key: string]: any }, privateKey: string) {
+  const paramsForSign = { ...params };
+  delete paramsForSign.sig;
+  
+  const variations = [];
+  
+  // Standard Paymentwall format (from docs)
+  const sortedKeys = Object.keys(paramsForSign).sort();
+  let baseString = '';
+  sortedKeys.forEach(key => {
+    let value = paramsForSign[key];
+    if (value === false) value = '0';
+    baseString += key + '=' + value;
+  });
+  baseString += privateKey;
+  
+  variations.push({
+    name: 'Standard (docs format)',
+    base: baseString,
+    md5: crypto.createHash('md5').update(baseString).digest('hex'),
+    sha256: crypto.createHash('sha256').update(baseString).digest('hex')
+  });
+  
+  // Try with uppercase private key
+  const upperBaseString = baseString.replace(privateKey, privateKey.toUpperCase());
+  variations.push({
+    name: 'With uppercase private key',
+    base: upperBaseString,
+    md5: crypto.createHash('md5').update(upperBaseString).digest('hex'),
+    sha256: crypto.createHash('sha256').update(upperBaseString).digest('hex')
+  });
+  
+  // Try converting string 'false'/'true' to 0/1
+  let baseStringConverted = '';
+  sortedKeys.forEach(key => {
+    let value = paramsForSign[key];
+    if (value === false || value === 'false') value = '0';
+    else if (value === true || value === 'true') value = '1';
+    baseStringConverted += key + '=' + value;
+  });
+  baseStringConverted += privateKey;
+  
+  variations.push({
+    name: 'Convert string false/true to 0/1',
+    base: baseStringConverted,
+    md5: crypto.createHash('md5').update(baseStringConverted).digest('hex'),
+    sha256: crypto.createHash('sha256').update(baseStringConverted).digest('hex')
+  });
+  
+  return variations;
 }
 
 export async function GET(request: NextRequest) {
@@ -108,63 +122,49 @@ export async function GET(request: NextRequest) {
     }
 
     const receivedSignature = params.sig;
+    const signVersion = params.sign_version ? parseInt(params.sign_version) : 2;
     
-    console.log('All parameters received:', JSON.stringify(params, null, 2));
-    console.log('Private key length:', PAYMENTWALL_CONFIG.privateKey.length);
-    console.log('Private key first/last 4 chars:', 
-      PAYMENTWALL_CONFIG.privateKey.substring(0, 4) + '...' + 
-      PAYMENTWALL_CONFIG.privateKey.substring(PAYMENTWALL_CONFIG.privateKey.length - 4)
-    );
+    console.log('\n=== Paymentwall Pingback Validation ===');
+    console.log('All parameters:', JSON.stringify(params, null, 2));
     console.log('Received signature:', receivedSignature);
-
-    // Try all signature variants
-    const variants = generateSignatureVariants(params, PAYMENTWALL_CONFIG.privateKey);
-    let isValidSignature = false;
-    let matchedVariant = null;
-
-    console.log('\n=== Trying all signature variants ===');
-    variants.forEach((variant, index) => {
-      console.log(`\n${variant.name}:`);
-      console.log(`Base string: "${variant.baseString}"`);
-      console.log(`Calculated: ${variant.signature}`);
-      console.log(`Match: ${variant.signature === receivedSignature}`);
+    console.log('Sign version:', signVersion);
+    console.log('Private key length:', PAYMENTWALL_CONFIG.privateKey.length);
+    
+    // Calculate signature using standard method
+    const calculatedSignature = generateSignature(params, PAYMENTWALL_CONFIG.privateKey, signVersion);
+    console.log('Calculated signature:', calculatedSignature);
+    console.log('Signatures match:', receivedSignature === calculatedSignature);
+    
+    let isValidSignature = receivedSignature === calculatedSignature;
+    
+    // If standard doesn't match, try debug variations
+    if (!isValidSignature) {
+      console.log('\n=== Trying variations ===');
+      const variations = debugSignatureVariations(params, PAYMENTWALL_CONFIG.privateKey);
       
-      if (variant.signature === receivedSignature) {
-        isValidSignature = true;
-        matchedVariant = variant.name;
-      }
-    });
-
-    if (isValidSignature) {
-      console.log(`\n✅ Signature validated using: ${matchedVariant}`);
-    } else {
-      console.log('\n❌ No signature variant matched');
-      
-      // Additional debugging: try with different private key formats
-      console.log('\n=== Additional debugging ===');
-      const trimmedKey = PAYMENTWALL_CONFIG.privateKey.trim();
-      const upperKey = PAYMENTWALL_CONFIG.privateKey.toUpperCase();
-      const lowerKey = PAYMENTWALL_CONFIG.privateKey.toLowerCase();
-      
-      console.log('Trying with trimmed private key:', trimmedKey !== PAYMENTWALL_CONFIG.privateKey);
-      console.log('Trying with uppercase private key:', upperKey !== PAYMENTWALL_CONFIG.privateKey);
-      console.log('Trying with lowercase private key:', lowerKey !== PAYMENTWALL_CONFIG.privateKey);
-      
-      if (trimmedKey !== PAYMENTWALL_CONFIG.privateKey) {
-        const trimmedVariants = generateSignatureVariants(params, trimmedKey);
-        trimmedVariants.forEach(variant => {
-          if (variant.signature === receivedSignature) {
-            console.log(`✅ Match found with trimmed private key using: ${variant.name}`);
-            isValidSignature = true;
-          }
-        });
-      }
+      variations.forEach(variation => {
+        console.log(`\n${variation.name}:`);
+        console.log(`Base: ${variation.base}`);
+        console.log(`MD5: ${variation.md5} ${variation.md5 === receivedSignature ? '✅ MATCH' : ''}`);
+        console.log(`SHA256: ${variation.sha256} ${variation.sha256 === receivedSignature ? '✅ MATCH' : ''}`);
+        
+        if (variation.md5 === receivedSignature || variation.sha256 === receivedSignature) {
+          isValidSignature = true;
+        }
+      });
     }
 
     if (!isValidSignature) {
-      console.error('Invalid pingback signature - no variant matched');
+      console.error('\n❌ Invalid pingback signature - no variation matched');
+      console.log('Double-check:');
+      console.log('1. Private key in .env matches Paymentwall dashboard');
+      console.log('2. All parameters are being sent correctly');
+      console.log('3. No extra parameters or missing parameters');
+      
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
+
+    console.log('\n✅ Signature validated successfully!');
 
     // Extract pingback data
     const {
