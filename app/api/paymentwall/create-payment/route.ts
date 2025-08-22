@@ -3,8 +3,8 @@ import crypto from 'crypto';
 
 // Paymentwall configuration
 const PAYMENTWALL_CONFIG = {
-  publicKey: 'e6960074ed9197ef99de1f3165620e87',
-  privateKey: '65da480110ee53f279b542b79ffe6c6e',
+  publicKey: process.env.PAYMENTWALL_PUBLIC_KEY!,
+  privateKey: process.env.PAYMENTWALL_PRIVATE_KEY!,
   apiType: 2, // API_GOODS
   baseUrl: 'https://api.paymentwall.com/api/subscription',
 };

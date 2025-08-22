@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
 const PAYMENTWALL_CONFIG = {
-  publicKey: 'e6960074ed9197ef99de1f3165620e87',
-  privateKey: '65da480110ee53f279b542b79ffe6c6e',
+  publicKey: process.env.PAYMENTWALL_PUBLIC_KEY!,
+  privateKey: process.env.PAYMENTWALL_PRIVATE_KEY!,
 };
 
 // Generate signature for pingback validation
@@ -15,12 +15,29 @@ function generateSignature(params: { [key: string]: any }, privateKey: string, v
   // Sort parameters alphabetically
   const sortedKeys = Object.keys(paramsForSign).sort();
   
-  // Create base string
+  // Create base string with proper value conversion
   const baseString = sortedKeys
-    .map(key => `${key}=${paramsForSign[key] === false ? '0' : paramsForSign[key]}`)
+    .map(key => {
+      let value = paramsForSign[key];
+      
+      // Convert boolean false to '0', boolean true to '1'
+      if (value === false || value === 'false') {
+        value = '0';
+      } else if (value === true || value === 'true') {
+        value = '1';
+      }
+      
+      // Convert to string if not already
+      value = String(value);
+      
+      return `${key}=${value}`;
+    })
     .join('');
 
   const signatureString = baseString + privateKey;
+  
+  console.log('Base string for signature:', baseString);
+  console.log('Signature string (with private key):', signatureString);
   
   let hash;
   if (version === 3) {
@@ -52,13 +69,16 @@ export async function GET(request: NextRequest) {
 
     // Validate signature
     const receivedSignature = params.sig;
-    const calculatedSignature = generateSignature(params, PAYMENTWALL_CONFIG.privateKey, 2);
+    const signVersion = params.sign_version ? parseInt(params.sign_version) : 2;
+    const calculatedSignature = generateSignature(params, PAYMENTWALL_CONFIG.privateKey, signVersion);
     
     console.log('Received signature:', receivedSignature);
     console.log('Calculated signature:', calculatedSignature);
+    console.log('Sign version:', signVersion);
 
     if (receivedSignature !== calculatedSignature) {
       console.error('Invalid pingback signature');
+      console.log('Parameters used for signature:', JSON.stringify(params, null, 2));
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
@@ -71,6 +91,7 @@ export async function GET(request: NextRequest) {
       type,
       ref: transactionRef,
       sign_version,
+      is_test,
       custom_shipping_name,
       custom_user_id,
       custom_shipping_phone,
@@ -85,13 +106,19 @@ export async function GET(request: NextRequest) {
       // ✅ PAYMENT SUCCESSFUL - Deliver product
       console.log(`✅ Payment successful for order: ${orderRef}`);
       
+      // Check if this is a test transaction
+      if (is_test === '1') {
+        console.log('⚠️  This is a TEST transaction');
+      }
+      
       try {
         // TODO: Update order status in database
         // await updateOrderStatus(orderRef, 'COMPLETED', {
         //   paymentStatus: 'PAID',
         //   transactionRef,
         //   paidAt: new Date(),
-        //   paymentMethod: 'Paymentwall'
+        //   paymentMethod: 'Paymentwall',
+        //   isTest: is_test === '1'
         // });
 
         console.log(`Order ${orderRef} marked as completed`);
